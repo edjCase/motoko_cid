@@ -1,14 +1,24 @@
 [package]
-name = ""
+name = "cid"
 version = "0.0.1"
-description = ""
-repository = "https://github.com/edjcase/"
-keywords = [ ]
+description = "Motoko implementation of Content Identifiers (CIDs) for use with IPFS and IPLD."
+repository = "https://github.com/edjcase/motoko_cid"
+keywords = [
+    "cid",
+    "content identifier",
+    "content addressable",
+    "ipfs",
+    "multiformats",
+    "ipld",
+]
 license = "MIT"
 
 [dependencies]
-base = "0.14.9"
+base = "0.14.11"
 new-base = "0.4.0"
 
 [dev-dependencies]
 test = "2.1.1"
+
+[toolchain]
+moc = "0.14.11"
