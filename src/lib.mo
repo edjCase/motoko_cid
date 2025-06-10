@@ -1,8 +1,11 @@
 import Nat8 "mo:base/Nat8";
-import Array "mo:base/Array";
 import Buffer "mo:base/Buffer";
 import Result "mo:base/Result";
 import Blob "mo:new-base/Blob";
+import Nat64 "mo:new-base/Nat64";
+import Nat "mo:new-base/Nat";
+import Iter "mo:base/Iter";
+import PeekableIter "mo:itertools/PeekableIter";
 
 module {
     public type Version = { #v0; #v1 };
@@ -16,152 +19,95 @@ module {
         hash : Blob;
     };
 
-    public type ParseError = {
-        #emptyBytes;
-        #unsupportedVersion : Nat8;
-        #unknownCodec : Nat;
-        #unknownHashAlgorithm : Nat;
-        #hashLengthMismatch : { expected : Nat; actual : Nat };
-        #insufficientBytes : { needed : Nat; available : Nat };
-        #invalidMultihash;
-    };
+    public func fromBytes(iter : Iter.Iter<Nat8>) : Result.Result<CID, Text> {
+        let peekableIter = PeekableIter.fromIter(iter);
 
-    public type EncodeError = {
-        #invalidCodec : Text;
-        #invalidHashAlgorithm : Text;
-        #invalidHashLength : {
-            expected : Nat;
-            actual : Nat;
-        };
-    };
+        let ?firstByte = peekableIter.next() else return #err("Empty input bytes");
 
-    public func fromBytes(value : [Nat8]) : Result.Result<CID, ParseError> {
-        if (value.size() == 0) {
-            return #err(#emptyBytes);
-        };
+        // Check for CIDv0 pattern (starts with 0x12, 0x20)
+        if (firstByte == 0x12 and peekableIter.peek() == ?0x20) {
+            ignore peekableIter.next(); // consume second byte
 
-        // Check if it's CIDv0 (starts with multihash, typically 0x1220 for SHA-256)
-        if (value.size() == 34 and value[0] == 0x12 and value[1] == 0x20) {
+            // This looks like CIDv0 - consume the remaining 32 hash bytes
+            let ?hashBlob = consumeBytes(peekableIter, 32) else return #err("Unexpected end of bytes when parsing CIDv0 hash");
+            // Verify we've consumed all bytes (CIDv0 should be exactly 34 bytes)
+            if (PeekableIter.hasNext(peekableIter)) {
+                // More bytes remaining, this is invalid for CIDv0
+                return #err("Invalid CIDv0: too many bytes");
+            };
             return #ok({
                 version = #v0;
-                codec = #dag_pb; // CIDv0 always uses dag-pb
+                codec = #dag_pb;
                 hashAlgorithm = #sha2_256;
-                hash = Blob.fromArray(Array.subArray(value, 2, 32)); // Skip multihash header
+                hash = hashBlob;
             });
         };
 
-        // Parse CIDv1
-        if (value[0] != 0x01) {
-            return #err(#unsupportedVersion(value[0]));
+        // Parse CIDv1 - expect version byte 0x01
+        let version = switch (firstByte) {
+            case (0x01) #v1;
+            case (_) return #err("Unsupported CID version: " # Nat8.toText(firstByte));
         };
 
         // Decode codec
-        let (codecCode, codecEnd) = decodeVarint(value, 1);
-        let codec = switch (codeToCodec(codecCode)) {
-            case (?c) c;
-            case (null) return #err(#unknownCodec(codecCode));
-        };
+        let ?codecCode = decodeVarint(peekableIter) else return #err("Unexpected end of bytes when parsing codec");
+        let ?codec = codeToCodec(codecCode) else return #err("Unsupported codec: " # Nat.toText(codecCode));
 
         // Decode multihash
-        let (hashCode, hashCodeEnd) = decodeVarint(value, codecEnd);
-        let hashAlgorithm = switch (codeToHashAlgorithm(hashCode)) {
-            case (?algo) algo;
-            case (null) return #err(#unknownHashAlgorithm(hashCode));
-        };
+        let ?hashCode = decodeVarint(peekableIter) else return #err("Unexpected end of bytes when parsing multihash");
+        let ?hashAlgorithm = codeToHashAlgorithm(hashCode) else return #err("Unsupported hash algorithm: " # Nat.toText(hashCode));
 
-        let (hashLength, hashLengthEnd) = decodeVarint(value, hashCodeEnd);
+        // Decode hash length
+        let ?hashLength = decodeVarint(peekableIter) else return #err("Unexpected end of bytes when parsing hash length");
         let expectedLength = getHashLength(hashAlgorithm);
-
         if (hashLength != expectedLength) {
-            return #err(#hashLengthMismatch({ expected = expectedLength; actual = hashLength }));
+            return #err("Invalid hash length: expected " # Nat.toText(expectedLength) # ", got " # Nat.toText(hashLength));
         };
 
-        if (hashLengthEnd + hashLength > value.size()) {
-            return #err(#insufficientBytes({ needed = hashLengthEnd + hashLength; available = value.size() }));
-        };
-
-        let hash = Array.subArray(value, hashLengthEnd, hashLength);
+        // Consume hash bytes
+        let ?hash = consumeBytes(peekableIter, hashLength) else return #err("Unexpected end of bytes when parsing hash");
 
         #ok({
-            version = #v1;
+            version = version;
             codec = codec;
             hashAlgorithm = hashAlgorithm;
-            hash = Blob.fromArray(hash);
+            hash = hash;
         });
     };
 
-    public func toBytes(cid : CID) : Result.Result<[Nat8], EncodeError> {
-        switch (cid.version) {
-            case (#v0) {
-                // CIDv0 is just a multihash
-                if (cid.codec != #dag_pb) {
-                    return #err(#invalidCodec("CIDv0 must use dag-pb codec"));
-                };
-                if (cid.hashAlgorithm != #sha2_256) {
-                    return #err(#invalidHashAlgorithm("CIDv0 must use sha2-256"));
-                };
-                toBytesV0(cid.hash);
+    // Efficiently consume exactly n bytes into a Blob
+    private func consumeBytes(iter : PeekableIter.PeekableIter<Nat8>, n : Nat) : ?Blob {
+        let buffer = Buffer.Buffer<Nat8>(n);
+        for (i in Iter.range(0, n - 1)) {
+            switch (iter.next()) {
+                case (?byte) buffer.add(byte);
+                case (null) return null; // Not enough bytes
             };
-            case (#v1) toBytesV1(cid);
         };
+        ?Blob.fromArray(Buffer.toArray(buffer));
     };
 
-    func toBytesV1(cid : CID) : Result.Result<[Nat8], EncodeError> {
-        // Validate hash length
-        let expectedLength = getHashLength(cid.hashAlgorithm);
-        if (cid.hash.size() != expectedLength) {
-            return #err(#invalidHashLength({ expected = expectedLength; actual = cid.hash.size() }));
+    private func decodeVarint(bytes : PeekableIter.PeekableIter<Nat8>) : ?Nat {
+        // TODO result should be Nat, not Nat64
+        var result : Nat64 = 0;
+        var shift : Nat64 = 0;
+        var bytesRead = 0;
+
+        for (byte in bytes) {
+            // Prevent infinite loop
+            let byte32 = Nat64.fromNat(Nat8.toNat(byte));
+            result := result + ((byte32 % 128) << shift);
+            bytesRead += 1;
+
+            if (byte32 < 128) {
+                return ?Nat64.toNat(result);
+            };
+            shift += 7;
         };
-
-        let buffer = Buffer.Buffer<Nat8>(cid.hash.size() + 10); // 10 bytes for version, codec, hash code, and length
-
-        // CIDv1: [version][codec][multihash]
-        buffer.add(0x01); // Version 1
-
-        // Encode codec
-        let codecBytes = encodeVarint(codecToCode(cid.codec));
-        for (byte in codecBytes.vals()) {
-            buffer.add(byte);
-        };
-
-        // Encode multihash
-        let hashCode = hashAlgorithmToCode(cid.hashAlgorithm);
-        let hashCodeBytes = encodeVarint(hashCode);
-        for (byte in hashCodeBytes.vals()) {
-            buffer.add(byte);
-        };
-
-        let hashLength = cid.hash.size();
-        let hashLengthBytes = encodeVarint(hashLength);
-        for (byte in hashLengthBytes.vals()) {
-            buffer.add(byte);
-        };
-
-        // Hash digest
-        for (byte in cid.hash.vals()) {
-            buffer.add(byte);
-        };
-
-        #ok(Buffer.toArray(buffer));
+        null; // Not enough bytes to complete varint
     };
 
-    func toBytesV0(hash : Blob) : Result.Result<[Nat8], EncodeError> {
-        let expectedLength = getHashLength(#sha2_256);
-        if (hash.size() != expectedLength) {
-            return #err(#invalidHashLength({ expected = expectedLength; actual = hash.size() }));
-        };
-        let buffer = Buffer.Buffer<Nat8>(expectedLength + 2);
-
-        // Multihash: [hash-code][hash-length][hash-digest]
-        buffer.add(0x12); // SHA-256 code
-        buffer.add(0x20); // 32 bytes
-        for (byte in hash.vals()) {
-            buffer.add(byte);
-        };
-        #ok(Buffer.toArray(buffer));
-    };
-
-    // Helper function to encode varint
+    // Helper function to encode varint (unchanged)
     private func encodeVarint(n : Nat) : [Nat8] {
         let buffer = Buffer.Buffer<Nat8>(5);
         var value = n;
@@ -173,26 +119,6 @@ module {
         buffer.add(Nat8.fromNat(value));
 
         Buffer.toArray(buffer);
-    };
-
-    // Helper function to decode varint
-    private func decodeVarint(bytes : [Nat8], start : Nat) : (Nat, Nat) {
-        var result = 0;
-        var shift = 0;
-        var pos = start;
-
-        while (pos < bytes.size()) {
-            let byte = Nat8.toNat(bytes[pos]);
-            result := result + ((byte % 128) * (2 ** shift));
-            pos := pos + 1;
-
-            if (byte < 128) {
-                return (result, pos);
-            };
-            shift := shift + 7;
-        };
-
-        (result, pos);
     };
 
     // Convert hash algorithm to multihash code
@@ -242,5 +168,77 @@ module {
             case (#sha2_512) 64;
             case (#blake2b_256) 32;
         };
+    };
+
+    // Rest of the functions (toBytes, toBytesV1, toBytesV0) remain unchanged
+    public func toBytes(cid : CID) : Result.Result<[Nat8], Text> {
+        switch (cid.version) {
+            case (#v0) {
+                // CIDv0 is just a multihash
+                if (cid.codec != #dag_pb) {
+                    return #err("CIDv0 must use dag-pb codec");
+                };
+                if (cid.hashAlgorithm != #sha2_256) {
+                    return #err("CIDv0 must use sha2-256");
+                };
+                toBytesV0(cid.hash);
+            };
+            case (#v1) toBytesV1(cid);
+        };
+    };
+
+    func toBytesV1(cid : CID) : Result.Result<[Nat8], Text> {
+        // Validate hash length
+        let expectedLength = getHashLength(cid.hashAlgorithm);
+        if (cid.hash.size() != expectedLength) {
+            return #err("Invalid hash length: expected " # Nat.toText(expectedLength) # ", got " # Nat.toText(cid.hash.size()));
+        };
+
+        let buffer = Buffer.Buffer<Nat8>(cid.hash.size() + 10); // 10 bytes for version, codec, hash code, and length
+
+        // CIDv1: [version][codec][multihash]
+        buffer.add(0x01); // Version 1
+
+        // Encode codec
+        let codecBytes = encodeVarint(codecToCode(cid.codec));
+        for (byte in codecBytes.vals()) {
+            buffer.add(byte);
+        };
+
+        // Encode multihash
+        let hashCode = hashAlgorithmToCode(cid.hashAlgorithm);
+        let hashCodeBytes = encodeVarint(hashCode);
+        for (byte in hashCodeBytes.vals()) {
+            buffer.add(byte);
+        };
+
+        let hashLength = cid.hash.size();
+        let hashLengthBytes = encodeVarint(hashLength);
+        for (byte in hashLengthBytes.vals()) {
+            buffer.add(byte);
+        };
+
+        // Hash digest
+        for (byte in cid.hash.vals()) {
+            buffer.add(byte);
+        };
+
+        #ok(Buffer.toArray(buffer));
+    };
+
+    func toBytesV0(hash : Blob) : Result.Result<[Nat8], Text> {
+        let expectedLength = getHashLength(#sha2_256);
+        if (hash.size() != expectedLength) {
+            return #err("Invalid hash length: expected " # Nat.toText(expectedLength) # ", got " # Nat.toText(hash.size()));
+        };
+        let buffer = Buffer.Buffer<Nat8>(expectedLength + 2);
+
+        // Multihash: [hash-code][hash-length][hash-digest]
+        buffer.add(0x12); // SHA-256 code
+        buffer.add(0x20); // 32 bytes
+        for (byte in hash.vals()) {
+            buffer.add(byte);
+        };
+        #ok(Buffer.toArray(buffer));
     };
 };
