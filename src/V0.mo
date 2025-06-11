@@ -11,10 +11,27 @@ import BaseX "mo:base-x-encoder";
 
 module {
 
+    /// Represents a CIDv0 (Content Identifier version 0) which contains only a SHA-256 hash.
+    /// CIDv0 always uses SHA-256 hashing and Base58 encoding for text representation.
+    ///
+    /// ```motoko
+    /// let cid : V0.CID = {
+    ///   hash = "\E3\B0\C4\42\98\FC\1C\14\9A\FB\F4\C8\99\6F\B9\24\27\AE\41\E4\64\9B\93\4C\A4\95\99\1B\78\52\B8\55";
+    /// };
+    /// ```
     public type CID = {
         hash : Blob; // 32-byte SHA-256 hash
     };
 
+    /// Converts a CIDv0 to its Base58 text representation.
+    ///
+    /// ```motoko
+    /// let cid : V0.CID = {
+    ///   hash = "\E3\B0\C4\42\98\FC\1C\14\9A\FB\F4\C8\99\6F\B9\24\27\AE\41\E4\64\9B\93\4C\A4\95\99\1B\78\52\B8\55";
+    /// };
+    /// let text = V0.toText(cid);
+    /// // Returns: "QmdfTbBqBPQ7VNxZEYEj14VmRuZBkqFbiwReogJgS1zR1n"
+    /// ```
     public func toText(cid : CID) : Text {
         if (cid.hash.size() != 32) {
             Runtime.trap("Invalid CIDv0 hash length: expected 32, got " # Nat.toText(cid.hash.size()));
@@ -33,6 +50,15 @@ module {
         BaseX.toBase58(iter);
     };
 
+    /// Parses a Base58-encoded text string into a CIDv0.
+    ///
+    /// ```motoko
+    /// let result = V0.fromText("QmdfTbBqBPQ7VNxZEYEj14VmRuZBkqFbiwReogJgS1zR1n");
+    /// switch (result) {
+    ///   case (#ok(cid)) { /* Successfully parsed CIDv0 */ };
+    ///   case (#err(error)) { /* Handle parsing error */ };
+    /// };
+    /// ```
     public func fromText(text : Text) : Result.Result<CID, Text> {
         let bytes = switch (BaseX.fromBase58(text)) {
             case (#ok(blob)) blob;
@@ -47,6 +73,15 @@ module {
         });
     };
 
+    /// Converts a CIDv0 to its binary byte representation (multihash format).
+    ///
+    /// ```motoko
+    /// let cid : V0.CID = {
+    ///   hash = "\E3\B0\C4\42\98\FC\1C\14\9A\FB\F4\C8\99\6F\B9\24\27\AE\41\E4\64\9B\93\4C\A4\95\99\1B\78\52\B8\55";
+    /// };
+    /// let bytes = V0.toBytes(cid);
+    /// // Returns: [0x12, 0x20, 0xE3, 0xB0, ...] (34 bytes total)
+    /// ```
     public func toBytes(cid : CID) : [Nat8] {
         if (cid.hash.size() != 32) {
             Runtime.trap("Invalid CIDv0 hash length: expected 32, got " # Nat.toText(cid.hash.size()));
@@ -62,6 +97,16 @@ module {
         Buffer.toArray(buffer);
     };
 
+    /// Parses a byte iterator into a CIDv0.
+    ///
+    /// ```motoko
+    /// let bytes : [Nat8] = [0x12, 0x20, 0xE3, 0xB0, /* ... 32 more hash bytes */];
+    /// let result = V0.fromBytes(bytes.vals());
+    /// switch (result) {
+    ///   case (#ok(cid)) { /* Successfully parsed CIDv0 */ };
+    ///   case (#err(error)) { /* Handle parsing error */ };
+    /// };
+    /// ```
     public func fromBytes(iter : Iter.Iter<Nat8>) : Result.Result<CID, Text> {
         // Check for CIDv0 pattern (starts with 0x12, 0x20)
         let ?firstByte = iter.next() else return #err("Invalid CIDv0: not enough bytes");
@@ -82,4 +127,5 @@ module {
             hash = hashBlob;
         });
     };
+
 };
