@@ -2,11 +2,14 @@ import Nat8 "mo:base/Nat8";
 import Result "mo:base/Result";
 import Iter "mo:base/Iter";
 import PeekableIter "mo:itertools/PeekableIter";
-import V0 "V0";
-import V1 "V1";
+import V0Module "V0";
+import V1Module "V1";
 import Text "mo:new-base/Text";
 
 module {
+
+    public let V0 = V0Module;
+    public let V1 = V1Module;
 
     public type CID = {
         #v0 : V0.CID;
