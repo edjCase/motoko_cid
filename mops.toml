@@ -5,10 +5,14 @@ description = "Motoko implementation of Content Identifiers (CIDs) for use with 
 repository = "https://github.com/edjcase/motoko_cid"
 keywords = [
   "cid",
-  "content identifier",
-  "content addressable",
+  "content",
+  "identifier",
+  "addressable",
   "ipfs",
   "multiformats",
+  "multihash",
+  "multicodec",
+  "multibase",
   "ipld",
 ]
 license = "MIT"
