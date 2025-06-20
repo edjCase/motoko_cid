@@ -13,15 +13,15 @@ keywords = [
   "multihash",
   "multicodec",
   "multibase",
-  "ipld",
+  "ipld"
 ]
 license = "MIT"
 
 [dependencies]
-base = "0.14.11"
+base = "0.14.13"
 new-base = "0.4.0"
 itertools = "0.2.2"
-base-x-encoder = "1.1.0"
+multiformats = "0.0.2"
 
 [dev-dependencies]
 test = "2.1.1"
