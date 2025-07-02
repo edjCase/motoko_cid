@@ -1,6 +1,6 @@
 [package]
 name = "cid"
-version = "0.0.2"
+version = "0.0.3"
 description = "Motoko implementation of Content Identifiers (CIDs) for use with IPFS and IPLD."
 repository = "https://github.com/edjcase/motoko_cid"
 keywords = [
@@ -18,13 +18,13 @@ keywords = [
 license = "MIT"
 
 [dependencies]
-base = "0.14.13"
+base = "0.14.14"
 new-base = "0.4.0"
 itertools = "0.2.2"
-multiformats = "0.0.2"
+multiformats = "0.0.4"
 
 [dev-dependencies]
 test = "2.1.1"
 
 [toolchain]
-moc = "0.14.11"
+moc = "0.14.14"

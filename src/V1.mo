@@ -88,7 +88,7 @@ module {
     /// ```
     public func toText(cid : CID, multibase : MultiBase) : Text {
         let bytes = toBytes(cid);
-        MultiBaseModule.fromBytes(bytes.vals(), multibase);
+        MultiBaseModule.toText(bytes.vals(), multibase);
     };
 
     /// Parses a text string into a CIDv1 with multibase encoding information.
@@ -101,7 +101,7 @@ module {
     /// };
     /// ```
     public func fromText(text : Text) : Result.Result<CIDWithMultiBase, Text> {
-        let (bytes, multibase) = switch (MultiBaseModule.toBytes(text)) {
+        let (bytes, multibase) = switch (MultiBaseModule.fromText(text)) {
             case (#ok(v)) v;
             case (#err(e)) return #err("Failed to decode CID bytes: " # e);
         };
