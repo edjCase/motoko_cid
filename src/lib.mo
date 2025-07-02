@@ -48,7 +48,26 @@ module {
         };
     };
 
-    /// Converts a CID with multibase encoding information to its text representation.
+    /// Converts a CID to its text representation.
+    /// CIDv1 types will default to base32 encoding.
+    ///
+    /// ```motoko
+    /// let cid : CIDWithMultiBase = #v1({
+    ///   codec = #dag_pb;
+    ///   hashAlgorithm = #sha2_256;
+    ///   hash = "\E3\B0\C4\42\98\FC\1C\14\9A\FB\F4\C8\99\6F\B9\24\27\AE\41\E4\64\9B\93\4C\A4\95\99\1B\78\52\B8\55";
+    /// });
+    /// let text = CID.toText(cid);
+    /// // Returns: "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+    /// ```
+    public func toText(cid : CID) : Text {
+        switch (cid) {
+            case (#v0(v0)) V0.toText(v0);
+            case (#v1(v1)) V1.toText(v1, #base32); // Default to base32 for v1
+        };
+    };
+
+    /// Converts a CID to its text representation.
     ///
     /// ```motoko
     /// let cid : CIDWithMultiBase = #v1({
@@ -57,10 +76,10 @@ module {
     ///   hash = "\E3\B0\C4\42\98\FC\1C\14\9A\FB\F4\C8\99\6F\B9\24\27\AE\41\E4\64\9B\93\4C\A4\95\99\1B\78\52\B8\55";
     ///   multibase = #base32;
     /// });
-    /// let text = CID.toText(cid);
+    /// let text = CID.toTextAdvanced(cid);
     /// // Returns: "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
     /// ```
-    public func toText(cid : CIDWithMultiBase) : Text {
+    public func toTextAdvanced(cid : CIDWithMultiBase) : Text {
         switch (cid) {
             case (#v0(v0)) V0.toText(v0);
             case (#v1((v1))) V1.toText(v1, v1.multibase);

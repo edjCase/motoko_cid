@@ -18,7 +18,7 @@ func testCidToText(
   cid : CID.CIDWithMultiBase,
   expectedText : Text,
 ) {
-  let actualText = CID.toText(cid);
+  let actualText = CID.toTextAdvanced(cid);
 
   if (actualText != expectedText) {
     Debug.trap(
