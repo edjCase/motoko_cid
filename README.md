@@ -154,6 +154,10 @@ public func fromText(text : Text) : Result.Result<CIDWithMultiBase, Text>;
 // Convert CID to binary format
 public func toBytes(cid : CID) : [Nat8];
 
+// Convert CID to binary format, writing directly to a buffer
+// Returns the number of bytes written
+public func toBytesBuffer(buffer : Buffer.Buffer<Nat8>, cid : CID) : Nat;
+
 // Parse CID from binary format (auto-detects version)
 public func fromBytes(iter : Iter.Iter<Nat8>) : Result.Result<CID, Text>;
 ```

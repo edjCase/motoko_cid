@@ -83,10 +83,27 @@ module {
     /// // Returns: [0x12, 0x20, 0xE3, 0xB0, ...] (34 bytes total)
     /// ```
     public func toBytes(cid : CID) : [Nat8] {
+        let buffer = Buffer.Buffer<Nat8>(34);
+        let _ = toBytesBuffer(buffer, cid);
+        Buffer.toArray(buffer);
+    };
+
+    /// Converts a CIDv0 to its binary byte representation, writing directly to a buffer.
+    /// This function is useful for streaming or when you want to manage buffer allocation yourself.
+    /// It returns the number of bytes written to the buffer.
+    ///
+    /// ```motoko
+    /// let buffer = Buffer.Buffer<Nat8>(100);
+    /// let cid : V0.CID = {
+    ///   hash = "\E3\B0\C4\42\98\FC\1C\14\9A\FB\F4\C8\99\6F\B9\24\27\AE\41\E4\64\9B\93\4C\A4\95\99\1B\78\52\B8\55";
+    /// };
+    /// let bytesWritten = V0.toBytesBuffer(buffer, cid);
+    /// // Returns: 34 (2 bytes for multihash prefix + 32 bytes for hash)
+    /// ```
+    public func toBytesBuffer(buffer : Buffer.Buffer<Nat8>, cid : CID) : Nat {
         if (cid.hash.size() != 32) {
             Runtime.trap("Invalid CIDv0 hash length: expected 32, got " # Nat.toText(cid.hash.size()));
         };
-        let buffer = Buffer.Buffer<Nat8>(32 + 2);
 
         // Multihash: [hash-code][hash-length][hash-digest]
         buffer.add(0x12); // SHA-256 code
@@ -94,7 +111,7 @@ module {
         for (byte in cid.hash.vals()) {
             buffer.add(byte);
         };
-        Buffer.toArray(buffer);
+        34; // 2 bytes for multihash prefix + 32 bytes for hash
     };
 
     /// Parses a byte iterator into a CIDv0.

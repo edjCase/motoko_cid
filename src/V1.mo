@@ -126,6 +126,26 @@ module {
     /// ```
     public func toBytes(cid : CID) : [Nat8] {
         let buffer = Buffer.Buffer<Nat8>(cid.hash.size() + 10); // 10 bytes for version, codec, hash code, and length
+        let _ = toBytesBuffer(buffer, cid);
+        Buffer.toArray(buffer);
+    };
+
+    /// Converts a CIDv1 to its binary byte representation, writing directly to a buffer.
+    /// This function is useful for streaming or when you want to manage buffer allocation yourself.
+    /// It returns the number of bytes written to the buffer.
+    ///
+    /// ```motoko
+    /// let buffer = Buffer.Buffer<Nat8>(100);
+    /// let cid : V1.CID = {
+    ///   codec = #dag_pb;
+    ///   hashAlgorithm = #sha2_256;
+    ///   hash = "\E3\B0\C4\42\98\FC\1C\14\9A\FB\F4\C8\99\6F\B9\24\27\AE\41\E4\64\9B\93\4C\A4\95\99\1B\78\52\B8\55";
+    /// };
+    /// let bytesWritten = V1.toBytesBuffer(buffer, cid);
+    /// // Returns: number of bytes written (varies based on codec and hash)
+    /// ```
+    public func toBytesBuffer(buffer : Buffer.Buffer<Nat8>, cid : CID) : Nat {
+        let startSize = buffer.size();
 
         // CIDv1: [version][codec][multihash]
         buffer.add(0x01); // Version 1
@@ -141,7 +161,7 @@ module {
             },
         );
 
-        Buffer.toArray(buffer);
+        buffer.size() - startSize; // Return the number of bytes written
     };
 
     /// Parses a byte iterator into a CIDv1.

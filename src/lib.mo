@@ -5,6 +5,7 @@ import PeekableIter "mo:itertools/PeekableIter";
 import V0Module "V0";
 import V1Module "V1";
 import Text "mo:new-base/Text";
+import Buffer "mo:base/Buffer";
 
 module {
 
@@ -123,6 +124,27 @@ module {
         switch (cid) {
             case (#v0(v0)) V0.toBytes(v0);
             case (#v1(v1)) V1.toBytes(v1);
+        };
+    };
+
+    /// Converts a CID to its binary byte representation, writing directly to a buffer.
+    /// This function is useful for streaming or when you want to manage buffer allocation yourself.
+    /// It returns the number of bytes written to the buffer.
+    ///
+    /// ```motoko
+    /// let buffer = Buffer.Buffer<Nat8>(100);
+    /// let cid : CID = #v1({
+    ///   codec = #dag_pb;
+    ///   hashAlgorithm = #sha2_256;
+    ///   hash = "\E3\B0\C4\42\98\FC\1C\14\9A\FB\F4\C8\99\6F\B9\24\27\AE\41\E4\64\9B\93\4C\A4\95\99\1B\78\52\B8\55";
+    /// });
+    /// let result = CID.toBytesBuffer(buffer, cid);
+    /// // Returns: #ok(36) for the number of bytes written
+    /// ```
+    public func toBytesBuffer(buffer : Buffer.Buffer<Nat8>, cid : CID) : Nat {
+        switch (cid) {
+            case (#v0(v0)) V0Module.toBytesBuffer(buffer, v0);
+            case (#v1(v1)) V1Module.toBytesBuffer(buffer, v1);
         };
     };
 
