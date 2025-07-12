@@ -1,7 +1,7 @@
 import Nat8 "mo:base/Nat8";
 import Result "mo:base/Result";
 import Iter "mo:base/Iter";
-import PeekableIter "mo:itertools/PeekableIter";
+import PeekableIter "mo:xtended-iter/PeekableIter";
 import V0Module "V0";
 import V1Module "V1";
 import Text "mo:new-base/Text";
