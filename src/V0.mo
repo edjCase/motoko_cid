@@ -136,12 +136,13 @@ module {
         };
 
         // This looks like CIDv0 - consume the remaining 32 hash bytes
-        let hashBlob = Blob.fromArray(Iter.toArray(iter));
-        if (hashBlob.size() != 32) {
-            return #err("Invalid CIDv0: expected 32-byte hash, got " # Nat.toText(hashBlob.size()));
+        let digestBytes = Iter.toArray(Iter.take(iter, 32));
+        if (digestBytes.size() != 32) {
+            return #err("Invalid CIDv0: expected 32-byte hash, got " # Nat.toText(digestBytes.size()));
         };
+
         return #ok({
-            hash = hashBlob;
+            hash = Blob.fromArray(digestBytes);
         });
     };
 
