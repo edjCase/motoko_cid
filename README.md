@@ -89,15 +89,13 @@ Debug.print("CIDv1: " # CID.V1.toText(cidv1, #base32)); // "bafybeihdwdcefgh4dqk
 ### Supported Codecs
 
 - `#raw`: Raw binary data
-- `#dag_pb`: DAG-PB (Protocol Buffers)
-- `#dag_cbor`: DAG-CBOR
-- `#dag_json`: DAG-JSON
+- `#dagPb`: DAG-PB (Protocol Buffers)
+- `#dagCbor`: DAG-CBOR
 
 ### Supported Hash Algorithms
 
-- `#sha2_256`: SHA-256 (32 bytes)
-- `#sha2_512`: SHA-512 (64 bytes)
-- `#blake2b_256`: Blake2b-256 (32 bytes)
+- `#sha2256`: SHA-256 (32 bytes)
+- `#sha2512`: SHA-512 (64 bytes)
 
 ### Supported Multibase Encodings
 
@@ -156,7 +154,7 @@ public func toBytes(cid : CID) : [Nat8];
 
 // Convert CID to binary format, writing directly to a buffer
 // Returns the number of bytes written
-public func toBytesBuffer(buffer : Buffer.Buffer<Nat8>, cid : CID) : Nat;
+public func toBytesBuffer(buffer : Buffer.Buffer<Nat8>, cid : CID);
 
 // Parse CID from binary format (auto-detects version)
 public func fromBytes(iter : Iter.Iter<Nat8>) : Result.Result<CID, Text>;
