@@ -1,14 +1,14 @@
-import Result "mo:core/Result";
-import Nat "mo:core/Nat";
-import Iter "mo:core/Iter";
-import Blob "mo:core/Blob";
-import Runtime "mo:core/Runtime";
-import Text "mo:core/Text";
-import Nat8 "mo:core/Nat8";
-import Array "mo:core/Array";
-import List "mo:core/List";
-import Buffer "mo:buffer";
-import BaseX "mo:base-x-encoder";
+import Result "mo:core@1/Result";
+import Nat "mo:core@1/Nat";
+import Iter "mo:core@1/Iter";
+import Blob "mo:core@1/Blob";
+import Runtime "mo:core@1/Runtime";
+import Text "mo:core@1/Text";
+import Nat8 "mo:core@1/Nat8";
+import Array "mo:core@1/Array";
+import List "mo:core@1/List";
+import Buffer "mo:buffer@0";
+import BaseX "mo:base-x-encoder@2";
 
 module {
 

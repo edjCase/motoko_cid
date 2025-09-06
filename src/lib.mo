@@ -1,11 +1,11 @@
-import Nat8 "mo:core/Nat8";
-import Result "mo:core/Result";
-import Iter "mo:core/Iter";
-import PeekableIter "mo:xtended-iter/PeekableIter";
+import Nat8 "mo:core@1/Nat8";
+import Result "mo:core@1/Result";
+import Iter "mo:core@1/Iter";
+import PeekableIter "mo:xtended-iter@1/PeekableIter";
 import V0Module "V0";
 import V1Module "V1";
-import Text "mo:core/Text";
-import Buffer "mo:buffer";
+import Text "mo:core@1/Text";
+import Buffer "mo:buffer@0";
 
 module {
 
